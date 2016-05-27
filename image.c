@@ -82,14 +82,23 @@ int main(int argc, char *argv[]){
 	}
 
 	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (sockfd < 0){
+		fprintf(stderr, "sockfd: %s\n", strerror(errno));
+	}
 
-	connect(sockfd, res->ai_addr, res->ai_addrlen);
+	rv = connect(sockfd, res->ai_addr, res->ai_addrlen);
+	if (rv < 0){
+		fprintf(stderr, "connect: %s\n", strerror(errno));
+	}
+
 
 	int i, j;
 
 	while(1){
+		i = rand()%xsize;
+		j = rand()%ysize;
 
-		for (i=0; i<xsize; i++) for (j=0; j<ysize; j++) sendpixel(i, j, image[1*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
+		sendpixel(i, j, image[3*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
 	}
 
 	return 0;
