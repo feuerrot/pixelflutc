@@ -17,11 +17,13 @@
 
 #define PACKETSIZE 1200
 
+typedef char command[22];
+
 struct addrinfo hints, *res;
 int rv;
 int sockfd;
-char command[PACKETSIZE];
-char tmpcommand[22];
+char packet[PACKETSIZE];
+command *commandlist;
 int sent;
 
 uint8_t *image;
@@ -39,6 +41,14 @@ static void cleanup(int signo){
 	exit(0);
 }
 
+void calculate_commands(command *commandlist){
+	for (int x = 0; x < xsize; x++){
+		for (int y = 0; y < ysize; y++){
+			 sprintf(commandlist[x + y*xsize], "PX %u %u %02X%02X%02X\n", x + xoffset, y + yoffset, image[3*(x+y*xsize)], image[3*(x+y*xsize)+1], image[3*(x+y*xsize)+2]);
+		}
+	}
+}
+
 void readimage(char *filename){
 	pic = open(filename, O_RDONLY);
 	if (pic == -1){
@@ -49,30 +59,33 @@ void readimage(char *filename){
 	read(pic, &ysize, 2);
 	printf("Image size: %u x %u\n", xsize, ysize);
 
-	if ((image = malloc(xsize*ysize*3)) == NULL){
+	image = malloc(xsize*ysize*3);
+	commandlist = malloc(xsize * ysize * sizeof(command));
+
+	if ((image == NULL) || (commandlist == NULL)){
 		printf("can't allocate memory\n");
 		exit(1);
 	}
 
 	read(pic, image, xsize*ysize*3);
+
+	calculate_commands(commandlist);
 }
 
 void sendpacket(){
-	if ((sent = send(sockfd, command, strlen(command), MSG_CONFIRM)) == -1) {
+	if ((sent = send(sockfd, packet, strlen(packet), MSG_CONFIRM)) == -1) {
 		fprintf(stderr, "send: %s\n", strerror(errno));
 	}
 	
-	memset(&command, 0, sizeof(command));
+	memset(&packet, 0, sizeof(packet));
 }
 
-void sendpixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b){
-	memset(&tmpcommand, 0, sizeof(tmpcommand));
-	sprintf(tmpcommand, "PX %u %u %02X%02X%02X\n", x, y, r, g, b);
-	if (strlen(command) + strlen(tmpcommand) >= PACKETSIZE){
+void sendpixel(uint16_t x, uint16_t y){
+	if (strlen(packet) + strlen(commandlist[x + y*xsize]) >= PACKETSIZE){
 		sendpacket();
 	}
 	
-	strcat(command, tmpcommand);
+	strcat(packet, commandlist[x + y*xsize]);
 }
 
 
@@ -119,8 +132,7 @@ int main(int argc, char *argv[]){
 	while(1){
 		i = rand()%xsize;
 		j = rand()%ysize;
-
-		sendpixel(i+xoffset, j+yoffset, image[3*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
+		sendpixel(i, j);
 	}
 
 	return 0;
