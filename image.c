@@ -75,11 +75,11 @@ int main(int argc, char *argv[]){
 
 	connect(sockfd, res->ai_addr, res->ai_addrlen);
 
-	while(1){
-		int i = rand()%xsize;
-		int j = rand()%ysize;
+	int i, j;
 
-		sendpixel(i, j, image[3*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
+	while(1){
+
+		for (i=0; i<xsize; i++) for (j=0; j<ysize; j++) sendpixel(i, j, image[1*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
 	}
 
 	freeaddrinfo(res); // all done with this structure
