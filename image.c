@@ -13,7 +13,10 @@
 #include <fcntl.h>
 
 #include <arpa/inet.h>
+#include <signal.h>
 
+struct addrinfo hints, *res;
+int rv;
 int sockfd;
 char command[22];
 int sent;
@@ -22,6 +25,14 @@ uint8_t *image;
 int pic;
 
 uint16_t xsize, ysize;
+
+static void cleanup(int signo){
+	printf("Got Signal %s, doing cleanup\n", strsignal(signo));
+	free(image);
+	freeaddrinfo(res); // all done with this structure
+	close(sockfd);
+	exit(0);
+}
 
 void readimage(char *filename){
 	pic = open(filename, O_RDONLY);
@@ -49,9 +60,6 @@ void sendpixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b){
 
 
 int main(int argc, char *argv[]){
-	struct addrinfo hints, *res;
-	int rv;
-
 	if (argc != 4){
 		printf("Usage: %s [host] [port] [image]\n", argv[0]);
 		return 1;
@@ -60,6 +68,8 @@ int main(int argc, char *argv[]){
 	srand(1);
 
 	readimage(argv[3]);
+
+	signal(SIGINT, cleanup);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -81,10 +91,6 @@ int main(int argc, char *argv[]){
 
 		for (i=0; i<xsize; i++) for (j=0; j<ysize; j++) sendpixel(i, j, image[1*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
 	}
-
-	freeaddrinfo(res); // all done with this structure
-
-	close(sockfd);
 
 	return 0;
 }
