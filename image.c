@@ -68,7 +68,7 @@ void sendpacket(){
 void sendpixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b){
 	memset(&tmpcommand, 0, sizeof(tmpcommand));
 	sprintf(tmpcommand, "PX %u %u %02X%02X%02X\n", x, y, r, g, b);
-	if (strlen(command) + strlen(tmpcommand) > PACKETSIZE){
+	if (strlen(command) + strlen(tmpcommand) >= PACKETSIZE){
 		sendpacket();
 	}
 	
