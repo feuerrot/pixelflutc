@@ -15,22 +15,27 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
+#define PACKETSIZE 1200
+
 struct addrinfo hints, *res;
 int rv;
 int sockfd;
-char command[22];
+char command[PACKETSIZE];
+char tmpcommand[22];
 int sent;
 
 uint8_t *image;
 int pic;
 
 uint16_t xsize, ysize;
+uint16_t xoffset = 0;
+uint16_t yoffset = 0;
 
 static void cleanup(int signo){
 	printf("Got Signal %s, doing cleanup\n", strsignal(signo));
-	free(image);
 	freeaddrinfo(res); // all done with this structure
 	close(sockfd);
+	free(image);
 	exit(0);
 }
 
@@ -44,28 +49,45 @@ void readimage(char *filename){
 	read(pic, &ysize, 2);
 	printf("Image size: %u x %u\n", xsize, ysize);
 
-	image = malloc(xsize*ysize*3);
+	if ((image = malloc(xsize*ysize*3)) == NULL){
+		printf("can't allocate memory\n");
+		exit(1);
+	}
 
 	read(pic, image, xsize*ysize*3);
 }
 
-void sendpixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b){
-	memset(&command, 0, sizeof(command));
-	sprintf(command, "PX %u %u %02X%02X%02X\n", x, y, r, g, b);
-
+void sendpacket(){
 	if ((sent = send(sockfd, command, strlen(command), MSG_CONFIRM)) == -1) {
 		fprintf(stderr, "send: %s\n", strerror(errno));
 	}
+	
+	memset(&command, 0, sizeof(command));
+}
+
+void sendpixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b){
+	memset(&tmpcommand, 0, sizeof(tmpcommand));
+	sprintf(tmpcommand, "PX %u %u %02X%02X%02X\n", x, y, r, g, b);
+	if (strlen(command) + strlen(tmpcommand) > PACKETSIZE){
+		sendpacket();
+	}
+	
+	strcat(command, tmpcommand);
 }
 
 
 int main(int argc, char *argv[]){
-	if (argc != 4){
-		printf("Usage: %s [host] [port] [image]\n", argv[0]);
+	if (argc != 4 && argc != 6){
+		printf("Usage: %s [host] [port] [image] <[xoffset] [yoffset]>\n", argv[0]);
 		return 1;
 	}
 
 	srand(1);
+
+	if (argc == 6){
+		xoffset = atoi(argv[4]);
+		yoffset = atoi(argv[5]);
+	}
 
 	readimage(argv[3]);
 
@@ -98,7 +120,7 @@ int main(int argc, char *argv[]){
 		i = rand()%xsize;
 		j = rand()%ysize;
 
-		sendpixel(i, j, image[3*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
+		sendpixel(i+xoffset, j+yoffset, image[3*(i+j*xsize)], image[3*(i+j*xsize)+1], image[3*(i+j*xsize)+2]);
 	}
 
 	return 0;
