@@ -38,6 +38,7 @@ static void cleanup(int signo){
 	freeaddrinfo(res); // all done with this structure
 	close(sockfd);
 	free(image);
+	free(commandlist);
 	exit(0);
 }
 
