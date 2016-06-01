@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
-#define PACKETSIZE 1200
+#define PACKETSIZE 1400
 
 typedef char command[22];
 
