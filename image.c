@@ -128,12 +128,10 @@ int main(int argc, char *argv[]){
 	}
 
 
-	int i, j;
-
-	while(1){
-		i = rand()%xsize;
-		j = rand()%ysize;
-		sendpixel(i, j);
+	for (int x = 0; x < xsize; x++){
+		for (int y = 0; y < ysize; y++){
+			sendpixel(x, y);
+		}
 	}
 
 	return 0;
